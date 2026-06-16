@@ -9,7 +9,12 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="16dp">
-
+        <Button
+            android:id="@+id/tvrcdata"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="飞控数据测试"
+            android:textAppearance="?attr/textAppearanceTitleMedium" />
         <TextView
             android:id="@+id/tvTitle"
             android:layout_width="match_parent"

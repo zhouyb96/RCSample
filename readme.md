@@ -1,7 +1,7 @@
 # HEQ RemoteController SDK API
 
 This document is for app developers who integrate `heq.v1.impl.remotecontroller` as an AAR.
-
+### LastVersion 0.2.0
 ## 1. Module Overview
 
 `sdk-impl-remotecontroller` provides:
@@ -15,30 +15,10 @@ This document is for app developers who integrate `heq.v1.impl.remotecontroller`
     - `ComponentType.REMOTE_CONTROLLER`
     - `ComponentType.AIRLINK`
 
-## 2. Build AAR
 
-Run in repository root:
+## 2. External App Integration
 
-```bash
-./gradlew :sdk-core:assembleRelease :sdk-impl-remotecontroller:assembleRelease
-```
-
-Windows PowerShell:
-
-```powershell
-.\gradlew.bat :sdk-core:assembleRelease :sdk-impl-remotecontroller:assembleRelease
-```
-
-Expected outputs:
-
-- `sdk-core/build/outputs/aar/sdk-core-release.aar`
-- `sdk-impl-remotecontroller/build/outputs/aar/sdk-impl-remotecontroller-release.aar`
-
-External apps need both AARs.
-
-## 3. External App Integration
-
-### 3.1 Add AAR
+### 2.1 Add AAR
 
 Place the 2 AAR files into consumer app local libs path, for example:
 
@@ -49,53 +29,114 @@ Gradle example:
 
 ```kotlin
 dependencies {
-    implementation(files("libs/sdk-core-release.aar"))
-    implementation(files("libs/sdk-impl-remotecontroller-release.aar"))
+    implementation(files("libs/sdk-core-${last-version}.aar"))
+    implementation(files("libs/sdk-impl-remotecontroller-${last-version}.aar"))
+    
+    implementation("com.google.code.gson:gson:2.13.1")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("io.netty:netty-all:4.1.112.Final")
 }
 ```
 
-### 3.2 SDK init + bootstrap
+### 2.2 SDK init + bootstrap
 
 ```kotlin
 import heq.v1.impl.remotecontroller.RemoteControllerSdkBootstrap
 
-// after SDKManager init/register
-RemoteControllerSdkBootstrap.installStandalone(productId = 20_001)
+//确保初始化完成再注册相关组件和调用Key
+SDKManager.getInstance().init(
+    this,
+    object : SDKManagerCallback {
+        override fun onInitProcess(event: HEQSDKInitEvent, totalProcess: Int) {}
+        override fun onRegisterSuccess() {
+            RemoteControllerSdkBootstrap.installStandalone()
+            //you can start listening 
+            //you can start fetch value
+        }
+        override fun onRegisterFailure(error: IHEQError) {
+        }
+        override fun onProductDisconnect(productId: Int) {}
+        override fun onProductConnect(productId: Int) {}
+        override fun onProductChanged(productId: Int) {}
+        override fun onDatabaseDownloadProgress(current: Long, total: Long) {}
+    },
+)
+SDKManager.getInstance().registerApp()
 ```
 
-## 4. Implemented Keys
+## 3. Implemented Keys
 
 The implementation is strict capability-based:
 - keys not listed below return `KEY_NOT_SUPPORTED`.
 
-### 4.1 RemoteController keys
-
-- `RemoteControllerKey.KeyConnection` (GET)
-- `RemoteControllerKey.KeyControlMode` (GET/SET)
-- `RemoteControllerKey.KeyFirmwareVersion` (GET)
-- `RemoteControllerKey.KeyPairingStatus` (GET)
-- `RemoteControllerKey.KeyRequestPairing` (ACTION)
-- `RemoteControllerKey.KeyStopPairing` (ACTION)
-
-### 4.2 AirLink keys
-
-- `AirLinkKey.KeyConnection` (GET)
-- `AirLinkKey.KeySignalQuality` (GET/LISTEN)
-- `AirLinkKey.KeyFrequencyBandRange` (GET)
-- `AirLinkKey.KeyFrequencyBand` (GET/SET)
-- `AirLinkKey.KeyChannelSelectionMode` (GET/SET)
-- `AirLinkKey.KeyFrequencyPointRange` (GET)
-- `AirLinkKey.KeyFrequencyPoint` (GET/SET)
-
-## 5. Usage Examples
-
-All examples below use HEQ SDK V1 wrapper (`heq.v1.et`) with DJI V5-style call patterns:
-
 ```kotlin
-import heq.v1.et.create
+val REMOTE_CONTROLLER_SUPPORTED_KEYS: List<HEQKey<*>> = listOf(
+        RemoteControllerKey.KeyConnection,
+        RemoteControllerKey.KeyControlMode,
+        RemoteControllerKey.KeyFirmwareVersion,
+        RemoteControllerKey.KeyPairingStatus,
+        RemoteControllerKey.KeyRequestPairing,
+        RemoteControllerKey.KeyStopPairing,
+    )
+
+val AIRLINK_SUPPORTED_KEYS: List<HEQKey<*>> = listOf(
+    AirLinkKey.KeyConnection,
+    AirLinkKey.KeySignalQuality,
+    AirLinkKey.KeyFrequencyBandMode,
+    AirLinkKey.KeyFrequencyBandRange,
+    AirLinkKey.KeyFrequencyBand,
+    AirLinkKey.KeyChannelSelectionMode,
+    AirLinkKey.KeyFrequencyPointRange,
+    AirLinkKey.KeyFrequencyPoint,
+    AirLinkKey.KeyRSSI,
+    AirLinkKey.KeyBandwidth,
+    AirLinkKey.KeyTxBandwidth,
+)
+
+val RC_FETCH_SUPPORTED_IDS: Set<String> = setOf(
+    RemoteControllerKey.KeyConnection.identifier,
+    RemoteControllerKey.KeyControlMode.identifier,
+    RemoteControllerKey.KeyFirmwareVersion.identifier,
+    RemoteControllerKey.KeyPairingStatus.identifier,
+)
+
+val RC_SET_SUPPORTED_IDS: Set<String> = setOf(
+    RemoteControllerKey.KeyControlMode.identifier,
+)
+
+val RC_ACTION_SUPPORTED_IDS: Set<String> = setOf(
+    RemoteControllerKey.KeyRequestPairing.identifier,
+    RemoteControllerKey.KeyStopPairing.identifier,
+)
+
+val AIRLINK_FETCH_SUPPORTED_IDS: Set<String> = setOf(
+    AirLinkKey.KeyConnection.identifier,
+    AirLinkKey.KeySignalQuality.identifier,
+    AirLinkKey.KeyFrequencyBandRange.identifier,
+    AirLinkKey.KeyFrequencyBand.identifier,
+    AirLinkKey.KeyChannelSelectionMode.identifier,
+    AirLinkKey.KeyFrequencyPointRange.identifier,
+    AirLinkKey.KeyFrequencyPoint.identifier,
+    AirLinkKey.KeyBandwidth.identifier,
+    AirLinkKey.KeyTxBandwidth.identifier,
+)
+
+val AIRLINK_SET_SUPPORTED_IDS: Set<String> = setOf(
+    AirLinkKey.KeyFrequencyBand.identifier,
+    AirLinkKey.KeyFrequencyBandMode.identifier,
+    AirLinkKey.KeyChannelSelectionMode.identifier,
+    AirLinkKey.KeyFrequencyPoint.identifier,
+    AirLinkKey.KeyBandwidth.identifier,
+    AirLinkKey.KeyTxBandwidth.identifier,
+)
 ```
 
-### 5.1 Listen AirLink signal quality
+## 4. Usage Examples
+
+All examples below use HEQ SDK V1 wrapperwith DJI V5-style call patterns:
+
+
+### 4.1 Listen AirLink signal quality
 
 ```kotlin
 AirLinkKey.KeySignalQuality.create().listen(this, getOnce = true) { quality ->
@@ -104,7 +145,7 @@ AirLinkKey.KeySignalQuality.create().listen(this, getOnce = true) { quality ->
 }
 ```
 
-### 5.2 Request pairing
+### 4.2 Request pairing
 
 ```kotlin
 RemoteControllerKey.KeyRequestPairing.create().action(
@@ -113,7 +154,7 @@ RemoteControllerKey.KeyRequestPairing.create().action(
 )
 ```
 
-### 5.3 Stop pairing
+### 4.3 Stop pairing
 
 ```kotlin
 RemoteControllerKey.KeyStopPairing.create().action(
@@ -122,7 +163,7 @@ RemoteControllerKey.KeyStopPairing.create().action(
 )
 ```
 
-### 5.4 Set/get AirLink band
+### 4.4 Set/get AirLink band
 
 ```kotlin
 AirLinkKey.KeyFrequencyBand.create().set(
@@ -134,7 +175,7 @@ AirLinkKey.KeyFrequencyBand.create().set(
 val band = AirLinkKey.KeyFrequencyBand.create().get()
 ```
 
-## 6. WebSocket Protocol Notes
+## 5. WebSocket Protocol Notes
 
 Current transport expects websocket server on:
 
@@ -155,14 +196,14 @@ Main command mappings:
 
 Payload fields are mapped with `@SerializedName` (snake_case + nested fields).
 
-## 7. Timeout Behavior
+## 6. Timeout Behavior
 
 - pairing timeout: 60s
 - normal command ack timeout: 3s
 
 Timeout returns SDK error code `TIMEOUT`.
 
-## 8. Limitations
+## 7. Limitations
 
 - No simulated fallback data; only real websocket-driven values.
 - Unsupported keys fail fast with `KEY_NOT_SUPPORTED`.

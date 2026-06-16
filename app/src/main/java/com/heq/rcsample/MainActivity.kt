@@ -1,6 +1,7 @@
 package com.heq.rcsample
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -44,6 +45,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        //确保初始化完成再注册相关组件和调用Key
         SDKManager.getInstance().init(
             this,
             object : SDKManagerCallback {
@@ -62,7 +64,9 @@ class MainActivity : AppCompatActivity() {
             },
         )
         SDKManager.getInstance().registerApp()
-
+        binding.tvrcdata.setOnClickListener {
+            startActivity(Intent(this, RCDataActivity::class.java))
+        }
         binding.btnRequestPairing.setOnClickListener {
             RemoteControllerKey.KeyRequestPairing.create().action(
                 onSuccess = { toast("请求对频已发送") },
@@ -262,8 +266,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun refreshSnapshot() {
-        RemoteControllerKey.KeyConnection.create().listen(this,{
-            if (it==true){
+        Log.e("1TAG", "refreshSnapshot: ", )
+        RemoteControllerKey.KeyConnection.create().listen(this,true,{oldValue, newValue ->
+            Log.e("TAG", "refreshSnapshot: $oldValue $newValue", )
+            if (newValue==true){
+                Log.e("TAG", "refreshSnapshot: ", )
                 RemoteControllerKey.KeyControlMode.create().get(
                     {
                         binding.mode.text="ControlMode:$it"
